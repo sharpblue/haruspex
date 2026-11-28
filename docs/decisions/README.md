@@ -122,6 +122,7 @@ gaps today, from 0049 to 0136, and no record was deleted to make them.
 | [0145](0145-varchar-json-is-read-through-its-code-page.md) | 28 Nov 2026 | JSON in `varchar` text is read through its code page |
 | [0146](0146-a-session-value-is-nullable-unless-it-is-never-null-in-any-state.md) | 19 Nov 2026 | A session value is nullable unless it is never NULL in any state |
 | [0147](0147-a-key-a-writer-may-escape-may-be-missing-from-a-path.md) | 28 Nov 2026 | A key a writer may escape may be missing from a path |
+| [0148](0148-a-clr-function-is-typed-from-its-declaration.md) | 28 Nov 2026 | A CLR function is typed from its declaration |
 
 ## Writing a record
 

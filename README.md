@@ -465,9 +465,14 @@ fails loudly, with an error saying which, rather than reaching the application's
 - **No query reads 2^63 rows**, which is why a `SUM` of a decimal of at most 19 digits is claimed never to overflow
   ([the inference](src/Haruspex.SqlServer.Inference/README.md#sum-avg-and-the-statistical-aggregates)).
 
-**Known gaps.** None is listed today. A case where a claim can be wrong because of how a database is set up, run or loaded,
+**Known gaps.** A case where a claim can be wrong because of how a database is set up, run or loaded,
 and which needs a decision or a larger change before the code handles it, is listed here until it is handled. Not every bug
 is: a rule of the analysis found wrong is fixed as a bug, in a change of its own, and isn't listed here.
+
+- **A CLR scalar function marked deterministic that isn't.** When a method marked `IsDeterministic = true` can give another
+  answer for the same arguments, a filter or a `CASE` proves nothing of a column computed by it: the server may run it again for
+  the select list, so a column `WHERE v IS NOT NULL` kept can still be null. The mark is in the assembly, which haruspex doesn't
+  read, so it takes the proof ([decision 0148](docs/decisions/0148-a-clr-function-is-typed-from-its-declaration.md)).
 
 On the two samples above, a test writes [the figures](docs/corpus-figures.md):
 

@@ -73,7 +73,7 @@ it, claim by claim.
 The rest of this page is the reference: how a procedure's statements are read in order, and what each construct inside
 them gives: calls ("Calls" below), what filters and single-row queries prove ("Refinement"), writes, triggers and cursors ("DML", "Triggers", "Cursors"), `APPLY`,
 `VALUES` lists and views ("APPLY", "Views"), `SELECT *` ("`SELECT *`"), expressions ("Expressions", "Precision lost", "CASE, IIF, CHOOSE and NULLIF",
-"Built-in functions", "Window functions"), table-valued functions, full-text table functions, set operations and the other joins, `OPENJSON`, `FOR JSON AUTO` and `ROOT`, JSON built in
+"Built-in functions", "Window functions"), table-valued functions, CLR functions, full-text table functions, set operations and the other joins, `OPENJSON`, `FOR JSON AUTO` and `ROOT`, JSON built in
 the project and traced to where it is read, and JSON assembled as text. The walk is `Walker.cs`, with `FlowState.cs` (the state and
 its join); what an expression or a query gives is `Typer.cs` and its parts, read in a `ReadScope.cs` (what each source a
 query binds holds, the state it is read in, what the conditions around it prove and the construct it is inside), and never
@@ -1754,9 +1754,45 @@ bound like a derived table: its arguments read the enclosing queries' columns, a
   are the declared ones. How many rows it returns is not read.
 - **What a call may not say.** A column list at the call is refused (317), and so is a table hint (a syntax error):
   `A_call_takes_no_column_alias_and_no_table_hint`. A column list is `unsupported-source`.
+- **A CLR function** is the table it declares ("CLR functions" below).
 - **Not modelled**, each unknown with a reason: a function the project does not define or defines twice, a scalar function
-  in `FROM` (`unresolved-table`), a CLR function (`external-code`), a function of another database, and one that reads
+  in `FROM` (`unresolved-table`), a function of another database, and one that reads
   itself through others. An inline function's `SELECT *` is expanded as a view's is ("`SELECT *`" above).
+
+## CLR functions
+
+A function whose body is a .NET method (`AS EXTERNAL NAME`) is typed from its declaration, in scripts and packages alike; the
+assembly is never read. Each rule is observed in `ClrFunctionObservationTests`, with an assembly compiled from source, and
+[decision 0148](../../docs/decisions/0148-a-clr-function-is-typed-from-its-declaration.md) gives the reasons.
+
+- **A value is converted to the declared type, or the call fails**
+  (`A_clr_functions_value_is_converted_to_its_declared_type_or_fails_the_call`), alike for a scalar function and a table
+  function's column, whatever the caller's `ANSI_WARNINGS` and `ARITHABORT`. A decimal is rounded to the declared scale, a date
+  or time to the declared fraction, and an `nchar` or `binary` padded; a string or bytes too long, a number or date out of
+  range, a NaN or an infinity, and XML the schema collection refuses each fail the call. Nothing is cut. So the declared
+  type's facts hold (`SqlTypes.ToClrShape`, `Typer.ReadClrTable`).
+- **Any value may be NULL.** A table function's columns are `nullable-column` at `<function>.<column>`: the server refuses
+  `NOT NULL` in the declaration, an alias type declared `NOT NULL`, a key, a `CHECK`, a `DEFAULT`, `IDENTITY` and a computed
+  column (`A_clr_table_functions_column_may_be_null_and_takes_no_not_null`), so whatever a script writes of them proves
+  nothing. A scalar function's value is `function-result`, of an alias type declared `NOT NULL` too
+  (`A_clr_scalar_function_of_an_alias_type_not_null_returns_null_and_no_more_than_its_length`).
+- **`RETURNS NULL ON NULL INPUT`** makes a scalar function NULL on a NULL argument without running it, and says nothing of
+  any other call (`Returns_null_on_null_input_makes_a_clr_function_null_without_running_it`). An extract's package doesn't
+  record it (SqlPackage 170.2.70), which loses only the reason `null-input`.
+- **A table function's columns** are the declaration's, by its names, in its order and in the collations it declares, whatever
+  the fill-row method calls its parameters (`A_clr_table_functions_columns_are_named_and_ordered_by_its_declaration`). It has
+  any number of rows, none included, and no key (`A_clr_table_function_gives_a_row_for_each_item_and_none_for_a_null_enumeration`).
+- **A type not observed is unknown** (`unsupported-sql-type`, `SqlTypes.ClrRefuses`): the server creates no CLR function
+  declared with `char`, `varchar`, `text`, `ntext`, `image`, `rowversion` or `json`
+  (`A_clr_function_takes_only_the_declared_type_its_net_type_maps_to`), nor a scalar one of `smallmoney` or `smalldatetime`
+  (`A_clr_scalar_function_is_not_created_to_return_smallmoney_or_smalldatetime`), which a table function's column may be
+  (`A_clr_table_functions_column_may_be_smallmoney_or_smalldatetime`).
+- **A known gap:** a filter or a `CASE` proves nothing of a column computed by a scalar method marked deterministic in its attribute that
+  isn't (`A_filter_proves_nothing_of_a_clr_scalar_function_wrongly_marked_deterministic`), and haruspex, which can't see the
+  mark, takes the proof. A table function's column keeps its proof
+  (`A_filter_holds_of_a_clr_table_functions_column_though_it_is_marked_deterministic`).
+- **Unknown** (`external-code`): a table function whose columns a package doesn't list, and a CLR procedure, which declares
+  no result set. JSON a CLR function returns is a string: its shape isn't declared yet.
 
 ## Full-text table functions
 
@@ -3175,7 +3211,7 @@ in `tests/Haruspex.DifferentialTests/JsonFunctionObservationTests.cs`:
   `nvarchar(10)` cuts the text to `[{"id":1,"`), and any body with control flow. A T-SQL body's value is converted to that
   type as a variable's is (cut short, rounded, padded; an overflow is an error, or NULL with `ANSI_WARNINGS` and
   `ARITHABORT` off), so the type keeps its length, digits and range (`A_scalar_functions_value_is_converted_to_its_declared_return_type`).
-  A CLR function's keeps none: nothing has observed SQL Server converting what a .NET method returns.
+  A CLR function's keeps them too ("CLR functions" above).
 - **A function that calls itself**, directly or through others, gives a recursive type named after it
   (`<Function>Node`): its object, or the object items of its array. It is found as a least fixed point, starting from
   no information and reading every body again until nothing changes, at most 4 steps per function in the cycle plus 4.

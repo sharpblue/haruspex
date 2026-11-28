@@ -14,14 +14,44 @@ namespace Haruspex.SqlServer.Inference;
 internal static class SqlTypes
 {
     /// <summary>
-    /// A CLR function's declared return type: its kind, with an alias resolved, but no facets, since nothing has observed SQL
-    /// Server converting the value a .NET method returns to it. A T-SQL function's value is converted, so its return type is
-    /// typed as <see cref="ToConvertedShape(DatabaseModel, SqlType?, SourceLocation)"/> types a variable.
+    /// A CLR scalar function's value: its declared return type with that type's facts, since SQL Server converts what the .NET
+    /// method returns to it or fails the call. A decimal is rounded and an <c>nchar</c> or <c>binary</c> padded, and a string or
+    /// bytes too long, or a number or date out of range, is an error, whatever the caller's <c>ANSI_WARNINGS</c>: nothing is cut
+    /// (observed: A_clr_functions_value_is_converted_to_its_declared_type_or_fails_the_call). A type no CLR function can be
+    /// declared to return is unknown (<see cref="ClrRefuses"/>).
     /// </summary>
-    public static Shape ToShape(DatabaseModel model, SqlType? type, SourceLocation at) =>
-        SchemaRules.ResolveType(model, type) is { } resolved
-            ? ToShape(new ColumnFacts(resolved), resolved, at, withFacets: false)
-            : Unsupported(type, at);
+    public static Shape ToClrShape(DatabaseModel model, SqlType? type, SourceLocation at) =>
+        ClrRefuses(model, type, column: false, at) ?? ToConvertedShape(model, type, at);
+
+    /// <summary>
+    /// The built-in types a CLR function's value was observed under, as a return type and as a table function's column
+    /// (A_clr_functions_value_is_converted_to_its_declared_type_or_fails_the_call). A .NET type maps to few SQL types, and SQL
+    /// Server refuses any other when the function is created: <c>varchar</c>, <c>json</c> and <c>rowversion</c> among them
+    /// (6551, 6514, 6258, observed: A_clr_function_takes_only_the_declared_type_its_net_type_maps_to).
+    /// </summary>
+    private static readonly HashSet<BuiltInType> ClrValues =
+    [
+        BuiltInType.TinyInt, BuiltInType.SmallInt, BuiltInType.Int, BuiltInType.BigInt, BuiltInType.Decimal, BuiltInType.Numeric, BuiltInType.Money,
+        BuiltInType.Float, BuiltInType.Real, BuiltInType.Bit, BuiltInType.NChar, BuiltInType.NVarChar, BuiltInType.Date, BuiltInType.Time,
+        BuiltInType.DateTime, BuiltInType.DateTime2, BuiltInType.DateTimeOffset, BuiltInType.UniqueIdentifier, BuiltInType.Binary,
+        BuiltInType.VarBinary, BuiltInType.Xml,
+    ];
+
+    /// <summary>The types a CLR table function's column was observed under that a scalar function's return type can't be (6551).</summary>
+    private static readonly HashSet<BuiltInType> ClrColumnValues = [BuiltInType.SmallMoney, BuiltInType.SmallDateTime];
+
+    /// <summary>
+    /// Why a CLR function's value of <paramref name="type"/> is unknown; null when the type is one its values were observed
+    /// under, or isn't a built-in type or an alias of one, which the mapping of types says itself.
+    /// </summary>
+    /// <param name="model">The project, whose alias types are resolved.</param>
+    /// <param name="type">The declared type.</param>
+    /// <param name="column">Whether it is a table function's column, rather than a scalar function's return type.</param>
+    /// <param name="at">Where it is declared.</param>
+    public static UnknownShape? ClrRefuses(DatabaseModel model, SqlType? type, bool column, SourceLocation at) =>
+        SchemaRules.ResolveType(model, type)?.Type is { } resolved && !ClrValues.Contains(resolved) && !(column && ClrColumnValues.Contains(resolved))
+            ? new UnknownShape(IrUnknownReason.UnsupportedSqlType, $"SQL Server was not observed to take {type} as {(column ? "a CLR table function's column" : "a CLR scalar function's return type")}.", at)
+            : null;
 
     /// <summary>
     /// A value read inside a body after SQL Server converted it to <paramref name="type"/>, such as a function's parameter or a

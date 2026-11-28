@@ -16,6 +16,11 @@
     <Compile Include="..\Shared\*.cs" LinkBase="Shared" />
   </ItemGroup>
   <ItemGroup>
+    <!-- The SDK's own C# compiler, which ClrAssembly runs to build the tests' .NET Framework assembly from source: no package. -->
+    <AssemblyMetadata Include="CSharpCompiler" Value="$(RoslynTargetsPath)/bincore/csc.dll" />
+    <AssemblyMetadata Include="DotNetHost" Value="$(DOTNET_HOST_PATH)" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
     <PackageReference Include="Testcontainers.MsSql" />

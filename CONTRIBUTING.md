@@ -244,6 +244,7 @@ split into parts along the constructs it covers. The families today:
 | Built-in functions | `FunctionTests` | `FunctionObservationTests` | `tests/fixtures/funcs` | "Built-in functions", "Window functions" |
 | A call's clauses, and `COLLATE` | `FunctionTests` (`FunctionTests.Clauses.cs`), `ClauseTableTests` | `ClauseObservationTests` | `tests/fixtures/funcs` | "Clauses" |
 | Table-valued functions | `TableFunctionTests` | `TableFunctionObservationTests` | `tests/fixtures/tabs` | "Table-valued functions" |
+| CLR functions | `ClrFunctionTests` | `ClrFunctionObservationTests` | none | "CLR functions", [decision 0148](docs/decisions/0148-a-clr-function-is-typed-from-its-declaration.md) |
 | Full-text table functions | `FullTextTests` | `FullTextObservationTests` | `tests/fixtures/glossary` | "Full-text table functions", [decision 0135](docs/decisions/0135-a-full-text-search-s-key-is-its-key-column-s-type-and-its-rank-is-nullable.md) |
 | Set operations and joins | `SetJoinTests` | `SetJoinObservationTests` | `tests/fixtures/sets` | "Set operations", "CROSS JOIN and FULL OUTER JOIN", "OPENJSON" |
 | Combining types | `SetTypeTests` | `SetTypeObservationTests`, `SetTypeGridTests` | `tests/fixtures/bazaar` | "Combining types" |

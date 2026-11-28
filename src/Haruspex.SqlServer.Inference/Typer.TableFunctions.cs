@@ -39,8 +39,8 @@ internal sealed partial class Typer
         {
             if (function.Redefinition is { } redefinition)
                 return LocalRelationValues.Unknown(new UnknownShape(IrUnknownReason.Redefined, Redefinitions.Why(redefinition), redefinition.At));
-            if (function is ScalarFunction { Body: ClrBody } or TableFunction { Body: ClrBody })
-                return Fails(IrUnknownReason.ExternalCode, $"{function.Name} is a CLR function: its rows come from .NET code.");
+            if (function is TableFunction { Body: ClrBody, Returns.Columns.Count: 0 })
+                return Fails(IrUnknownReason.ExternalCode, $"{function.Name} is a CLR function, and the columns it declares can't be read.");
             if (function is ScalarFunction)
                 return Fails(IrUnknownReason.UnresolvedTable, $"{function.Name} is a scalar function, not a table.");
 
@@ -99,6 +99,35 @@ internal sealed partial class Typer
             ? Conversions.Fits(literal, target, negative)
             : null;
         return Value.Computed(declared, Converting(value, declared, At(argument), summaries.Session, argument, fits: fits == true));
+    }
+
+    /// <summary>
+    /// A CLR table-valued function's rows: the columns its <c>RETURNS TABLE</c> declares, in that order and by those names
+    /// (observed: A_clr_table_functions_columns_are_named_and_ordered_by_its_declaration). SQL Server converts each value the
+    /// fill-row method sets to its column's type or fails the call, so the type's facts hold, in the column's collation
+    /// (A_clr_functions_value_is_converted_to_its_declared_type_or_fails_the_call). Any value may be NULL: the server refuses
+    /// <c>NOT NULL</c> in the declaration, with a key, a <c>CHECK</c>, a <c>DEFAULT</c> and <c>IDENTITY</c>
+    /// (A_clr_table_functions_column_may_be_null_and_takes_no_not_null), so whatever a script writes of them proves nothing.
+    /// How many rows it returns is the .NET code's.
+    /// </summary>
+    public LocalRelationValues ReadClrTable(TableFunction function)
+    {
+        ArgumentNullException.ThrowIfNull(function);
+        var name = function.Name.ToString();
+        var table = function.Returns;
+        var declared = table with
+        {
+            Columns = [.. table.Columns.Select(c => c with { Nullability = DeclaredNullability.Null, IsIdentity = false, HasDefault = false })],
+            PrimaryKey = [],
+            Checks = [],
+            UniqueKeys = [],
+        };
+        var values = declared.Columns.Select(c => c.IsComputed
+            ? Value.Unknown(Unsupported(IrUnknownReason.ExternalCode, $"{name}.{c.Name} is declared as a computed column, which SQL Server refuses in a CLR function (6526).", c.At))
+            : SqlTypes.ClrRefuses(model, c.Type, column: true, c.At) is { } refused
+                ? Value.Unknown(refused)
+                : DeclaredValue(declared, c, name, temporary: false));
+        return new LocalRelationValues([.. declared.Columns.Select(c => c.Name)], [.. values], null);
     }
 
     /// <summary>

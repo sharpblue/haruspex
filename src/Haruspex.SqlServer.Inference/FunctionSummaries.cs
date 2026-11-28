@@ -274,19 +274,19 @@ internal sealed class FunctionSummaries
         var returnType = function.Returns;
         var resolvedType = SchemaRules.ResolveType(model, returnType);
         var resolved = resolvedType?.BuiltIn;
-        var returnsJson = resolvedType?.Type == BuiltInType.Json;
+        var returnsJson = resolvedType?.Type == BuiltInType.Json && function.Body is not ClrBody;
         var nullOnNull = function.ReturnsNullOnNullInput;
 
         // The declared type: a json return is live JSON whose shape is in the data. A T-SQL body's value, encrypted or not, is
         // converted to the declared type, as a variable's is: cut short, rounded or padded, and an overflow an error or NULL,
         // which the function-result reason allows (observed: A_scalar_functions_value_is_converted_to_its_declared_return_type,
-        // A_scalar_functions_value_its_return_type_cannot_hold_is_an_error_or_null). So the type's facts hold. Nothing has
-        // observed what SQL Server does with a CLR method's value, so its type gives no facts.
+        // A_scalar_functions_value_its_return_type_cannot_hold_is_an_error_or_null). So the type's facts hold. A CLR
+        // method's value is converted too, or the call fails (SqlTypes.ToClrShape).
         var declared = returnsJson
             ? new UnknownShape(IrUnknownReason.JsonShapeUnknown, $"{function.Name} returns json that is not built in a form read here.", at)
-            : function.Body is SqlBody or EncryptedBody
-                ? SqlTypes.ToConvertedShape(model, returnType, at)
-                : SqlTypes.ToShape(model, returnType, at);
+            : function.Body is ClrBody
+                ? SqlTypes.ToClrShape(model, returnType, at)
+                : SqlTypes.ToConvertedShape(model, returnType, at);
         var declaredOnly = new FunctionReturn(declared, returnsJson, null, [new IrNullReason(IrNullRule.FunctionResult, at.ToString())], nullOnNull);
 
         // A function of nvarchar may return JSON assembled as text, which a shorter type cuts short, and a cut array is never

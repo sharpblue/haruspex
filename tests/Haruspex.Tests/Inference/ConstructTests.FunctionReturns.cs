@@ -37,13 +37,4 @@ public partial class ConstructTests
 
         Assert.Equal((4, false), (length?.Value, length?.IsFixed));
     }
-
-    [Fact]
-    public void A_clr_functions_string_claims_no_length()
-    {
-        // Nothing has observed SQL Server converting what a .NET method returns, so its declared type gives no facts.
-        var doc = Returning("CREATE FUNCTION dbo.f() RETURNS nvarchar(10) AS EXTERNAL NAME Lib.[Lib.Functions].F;", "dbo.f()");
-
-        Assert.True(ReturnFacets(doc)?.IsEmpty ?? true);
-    }
 }

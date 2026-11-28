@@ -72,6 +72,6 @@ internal sealed partial class Typer
             return Untyped($"{table.Name}.{name}, its full-text key column, is computed, masked or not in the table, which is not modelled.");
         return SchemaRules.ResolveType(model, column.Type) is { } type
             ? Value.Computed(SqlTypes.ToShape(SchemaRules.TypeFacts(type, SchemaRules.EffectiveCollation(model, table, column)), column.Type, at), [])
-            : Value.Unknown((UnknownShape)SqlTypes.ToShape(model, column.Type, at));
+            : Value.Unknown((UnknownShape)SqlTypes.ToConvertedShape(model, column.Type, at));
     }
 }

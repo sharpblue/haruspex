@@ -515,7 +515,7 @@ public sealed partial class Binder
     /// <summary>
     /// The columns of what a call in FROM returns: an inline function's query's, a multi-statement
     /// or CLR function's declared table's; null for a call with a column list, which SQL Server refuses (317), and for a
-    /// function that is not table-valued, is defined more than once, or isn't the project's.
+    /// function that is not table-valued, is defined more than once, isn't the project's, or whose declared columns couldn't be read.
     /// </summary>
     private EquatableArray<string>? FunctionColumns(SchemaObjectFunctionTableReference call, Callee callee)
     {
@@ -531,6 +531,10 @@ public sealed partial class Binder
                 var names = binder.BindWith(inline.Query.WithCtesAndXmlNamespaces, NameEnvironment.Empty.WithDeclarations(bindings.Declarations(inline.Parameters, null, null, inline.Span, SchemaSearch.Within(inline)))).Names;
                 return binder.Bind(query, null, names).Listed([]);
             }),
+
+            // Every table function has a column, so one whose declaration lists none is one that couldn't be read: its columns
+            // aren't known, rather than none.
+            TableFunction { Returns.Columns.Count: 0 } => null,
             TableFunction table => [.. table.Returns.Columns.Select(c => c.Name)],
             ScalarFunction => null,
         };
