@@ -2292,7 +2292,8 @@ declared result) is found only when every character is an ASCII letter or digit,
 ^ _ { | } ~``, which no common writer, run or documented, escapes (`System.Text.Json` escapes ``" & ' + < > \ ` `` and everything
 past ASCII, Gson `=`, `JSON.stringify` only `"`, `\` and control characters); otherwise it may be missing, and the note names the key and the characters.
 SQL Server's own key (`FOR JSON`, `json_object`, the REST envelope) is found unless it holds `/`, `\` or a control character, which
-it escapes and a path can't spell; a key in a literal or assembled text holds no escape, so it is found. Why: [decision
+it escapes: a path spelling the same escape (`$."a\/b"`) would find it, but `JsonPath` reads no escape but `\"`, so a path walked
+here never does. A key in a literal or assembled text holds no escape, so it is found. Why: [decision
 0147](../../docs/decisions/0147-a-key-a-writer-may-escape-may-be-missing-from-a-path.md).
 
 A recursive node or an unknown is not walked, and the function falls back to its own rule. Any JSON at the end of a path may be

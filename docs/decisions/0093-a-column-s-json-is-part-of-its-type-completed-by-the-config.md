@@ -10,7 +10,8 @@ functions, `INSERT … EXEC` and `OUTPUT … INTO`. Read plainly, the column is 
 The IR records each declaration with the hash of every schema file it read (`columns`, IR 0.28), so that a changed schema is a
 change `haruspex check` reports, and lists, under `overrides`, a `column-json` claim on each object that reads a declared column.
 An object of a column's JSON may hold keys its schema doesn't list (it is `open`) unless the schema closes it, since its writer
-is an application, not `FOR JSON`; no emitter refuses such a key.
+is an application, not `FOR JSON`; no emitter refuses such a key. A key its writer may have spelled with an escape may be missing
+from a path ([decision 0147](0147-a-key-a-writer-may-escape-may-be-missing-from-a-path.md)).
 It completes [decision 0017](0017-stored-json-is-typed-only-by-declaration.md): stored JSON is typed only by declaration, and this is
 the declaration.
 

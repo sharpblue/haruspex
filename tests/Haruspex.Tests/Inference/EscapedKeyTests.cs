@@ -109,6 +109,17 @@ public class EscapedKeyTests
     }
 
     [Fact]
+    public void A_key_a_writer_may_escape_says_only_that_it_may_not_be_found()
+    {
+        var doc = Read("column");
+
+        var because = Assert.Single(Field(doc, "cafe").NullableBecause);
+        Assert.Equal(
+            "`$.\"café\"` may not be found: a writer may write the key `café`'s `é` as an escape (System.Text.Json and Python's json.dumps do, by default), and a path finds a key only as it is spelled",
+            because.Detail);
+    }
+
+    [Fact]
     public void Under_a_strict_path_a_key_a_writer_may_escape_is_an_error_where_missing_never_null()
     {
         var doc = Infer("""CREATE PROCEDURE shop.p AS SELECT JSON_VALUE(o.extra, 'strict $."café"') AS cafe FROM shop.orders AS o;""", Column);
@@ -154,8 +165,8 @@ public class EscapedKeyTests
     [MemberData(nameof(Slashed))]
     public void A_key_sql_server_writes_with_its_slash_escaped_is_never_found_by_a_path(string built)
     {
-        // FOR JSON and json_object write a/b as a\/b (observed: For_json_and_json_object_escape_a_key_s_slash_…), and a path
-        // can't spell \/: JsonPath reads only \". So $."a/b" is always NULL, which main claimed non-null.
+        // FOR JSON and json_object write a/b as a\/b (observed: For_json_and_json_object_escape_a_key_s_slash_…). $."a\/b" would
+        // find it, but JsonPath reads no escape but \", so the path walked here, $."a/b", is always NULL, which main claimed non-null.
         var doc = Infer($"""
             CREATE PROCEDURE shop.p AS
             DECLARE @j nvarchar(max) = {built};
@@ -167,5 +178,21 @@ public class EscapedKeyTests
         Assert.Equal(IrNullRule.JsonNullOrAbsent, because.Rule);
         Assert.Contains("never there", because.Detail, StringComparison.Ordinal);
         Assert.Contains("`a/b`'s `/`", because.Detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_key_written_in_a_literal_or_assembled_text_is_found_whatever_its_characters()
+    {
+        // The SQL spells these keys itself, with no escape (one that has one is unknown), so a path spelling them the same finds them:
+        // the server gives 1 for json_value(N'{"a/b":1}', '$."a/b"').
+        var doc = Infer("""
+            CREATE PROCEDURE shop.p @id int AS
+            IF @id IS NULL RETURN;
+            DECLARE @assembled nvarchar(max) = N'{"a/b":' + CAST(@id AS nvarchar(11)) + N',"café":' + CAST(@id AS nvarchar(11)) + N'}';
+            SELECT JSON_VALUE(N'{"a/b":1,"café":2}', '$."a/b"') AS literal_slash, JSON_VALUE(N'{"a/b":1,"café":2}', '$."café"') AS literal_cafe,
+                JSON_VALUE(@assembled, '$."a/b"') AS assembled_slash, JSON_VALUE(@assembled, '$."café"') AS assembled_cafe;
+            """);
+
+        Assert.All(["literal_slash", "literal_cafe", "assembled_slash", "assembled_cafe"], c => Assert.False(Field(doc, c).Nullable));
     }
 }

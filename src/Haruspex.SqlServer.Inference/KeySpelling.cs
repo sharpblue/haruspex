@@ -11,14 +11,15 @@ namespace Haruspex.SqlServer.Inference;
 /// <para>
 /// A path finds a key only when the two are spelled the same, character for character, neither decoded: a key stored as
 /// <c>\u0041</c> is not found by <c>$.A</c>, nor one stored as <c>A</c> by <c>$."\u0041"</c>, under <c>nvarchar</c>, <c>varchar</c> and
-/// <c>json</c> alike (observed: <c>EscapedKeyObservationTests.A_path_finds_a_key_only_where_both_are_spelled_the_same</c>). The path
-/// itself can spell only <c>\"</c> (<see cref="JsonPath"/> reads no other escape), which it and every writer observed write for a quote.
+/// <c>json</c> alike (observed: <c>EscapedKeyObservationTests.A_path_finds_a_key_only_where_both_are_spelled_the_same</c>). A path
+/// may spell a key with any escape, and then finds the key spelled the same, but haruspex walks only a path whose one escape is
+/// <c>\"</c> (<see cref="JsonPath"/> reads no other), which SQL Server's writers write for a quote too.
 /// A parser decodes escapes, so a plain read keeps every key; only a path loses one.
 /// </para>
 /// <para>
 /// So a key is found where its writer wrote it as itself. Of an application's writer nothing is known, so the key is found only
 /// when every character is one none of the writers observed escapes (<see cref="NoWriterEscapes"/>); otherwise it may be missing.
-/// SQL Server's own spelling is known, so a key it escapes is never found.
+/// SQL Server's own spelling is known, so a key it escapes otherwise than as <c>\"</c> is never found by a path haruspex walks.
 /// </para>
 /// </remarks>
 internal static class KeySpelling

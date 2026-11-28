@@ -7,8 +7,10 @@ application wrote (declared for a column, a parameter or a REST endpoint's respo
 the schema says only when every character of it is an ASCII letter or digit, the blank, or one of `! # $ % ( ) * , - . : ; ? @
 [ ] ^ _ { | } ~`: no common writer, run or documented, escapes those. A key with any other character may be missing, and the value read is
 nullable, with a reason that names the key and the characters (for `café`, its `é`). Of JSON `FOR JSON` or
-`json_object` built here, SQL Server's own spelling decides: it writes a key's `/`, `\` and control characters as escapes,
-which a path can't spell, so such a key is never found; every other key is. A key written in a literal or assembled text holds no escape, so it is found. One rule (`KeySpelling`), in the
+`json_object` built here, SQL Server's own spelling decides: it writes a key's `/`, `\` and control characters as escapes.
+A path that spells the same escape finds such a key (`$."a\/b"` finds `a\/b`), but haruspex doesn't walk a path with any escape
+but `\"` (`JsonPath` reads no other), so a path it walks never finds the key; every other key is found. A key written in a
+literal or assembled text holds no escape, so it is found. One rule (`KeySpelling`), in the
 walk every path read shares (`JsonPathWalk`), decides it for `JSON_VALUE`, `json_query`, `OPENJSON` at a row path and
 `OPENJSON … WITH`. A plain read, which a parser decodes, keeps every key.
 

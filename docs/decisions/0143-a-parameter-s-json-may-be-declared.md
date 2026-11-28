@@ -20,7 +20,8 @@ every caller, not a fact, and is recorded as declared, never as proven.
   nullable. Observed (`ParameterJsonObservationTests`): text that isn't a JSON object or array fails the call with 13609 under a
   lax path as under a strict one, not NULL, and the IR describes calls that succeed; JSON
   of another shape gives NULL under a lax path. That last case is the assumption the declaration makes, the same one a declared
-  column makes about every writer: a required key under a parameter proved not NULL is claimed not null, as declared.
+  column makes about every writer: a required key under a parameter proved not NULL is claimed not null, as declared, where a
+  path finds it whatever a caller's escaping ([decision 0147](0147-a-key-a-writer-may-escape-may-be-missing-from-a-path.md)).
 - **A `varchar` or `char` parameter's code page.** Its text is in the database's code page, so a character the code page lacks,
   sent as itself, arrives as another (`Ω` as `O`; through the driver, as `?`), though sent as a JSON escape (`\u03a9`) it is kept
   (`ParameterJsonObservationTests`). A caller may send either, so the body reads it as the database's code page gives it back, as a
