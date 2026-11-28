@@ -70,12 +70,19 @@ internal static class JsonPathWalk
                         : new Found(null, true, false, [$"`{here}` is never there: the object has no key `{key}`"], Never: true);
                 }
 
+                // A path finds the key only as it is spelled, and its writer may have spelled it otherwise.
+                var (verdict, misspelled) = KeySpelling.Finds(obj.Writers, key);
+                if (verdict == KeySpelling.Verdict.Never)
+                    return new Found(null, true, false, [$"`{here}` is never there: {misspelled}"], Never: true);
+
                 var nullable = field.NullableBecause.Count > 0;
                 var notes = new List<string>();
+                if (verdict == KeySpelling.Verdict.MayBeMissing)
+                    notes.Add($"`{here}` may not be found: {misspelled}");
 
                 // A key left out when null is missing exactly when null; one left out whatever its value (optional, in a column's
                 // declared JSON) may be missing, and null too where it may be null.
-                var missing = field.Presence == IrPresence.Optional || (field.Presence == IrPresence.OmittedWhenNull && nullable);
+                var missing = verdict == KeySpelling.Verdict.MayBeMissing || field.Presence == IrPresence.Optional || (field.Presence == IrPresence.OmittedWhenNull && nullable);
                 var nullHere = nullable && field.Presence != IrPresence.OmittedWhenNull;
                 if (field.Presence == IrPresence.Optional)
                     notes.Add($"`{here}` may be left out, {field.LeftOutBecause ?? "as the schema doesn't require it"}");

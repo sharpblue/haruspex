@@ -339,7 +339,7 @@ internal static partial class JsonAssembly
 
             if (frame.Members.Any(m => m.Name is null))
                 return Stop("a key is built from data beside keys written in literals, so the object is neither one of known keys nor one whose keys are all data", at);
-            shape = new ObjectShape([.. frame.Members.Select(m => m is { Name: { } name } ? new FieldShape(name, m.Shape, m.Presence, m.Nulls) : null).OfType<FieldShape>()]);
+            shape = new ObjectShape([.. frame.Members.Select(m => m is { Name: { } name } ? new FieldShape(name, m.Shape, m.Presence, m.Nulls) : null).OfType<FieldShape>()]) { Writers = KeyWriters.Literal };
             return true;
         }
 

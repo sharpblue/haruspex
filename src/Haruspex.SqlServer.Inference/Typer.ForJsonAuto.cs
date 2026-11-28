@@ -146,7 +146,7 @@ internal sealed partial class Typer
                     at);
             }
 
-            return new ObjectShape([.. fields]);
+            return new ObjectShape([.. fields]) { Writers = KeyWriters.SqlServer };
         }
     }
 

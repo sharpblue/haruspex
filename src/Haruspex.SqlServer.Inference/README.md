@@ -2273,7 +2273,8 @@ wrong, since every call fails, but reading one it accepts as other steps would.
 
 | At | A step finds | It may find nothing | It may find `null` |
 |---|---|---|---|
-| a key an object lists | the key's type | where the schema doesn't require it, or FOR JSON leaves it out when null | where its type allows null |
+| a key an object lists | the key's type | where the schema doesn't require it, FOR JSON leaves it out when null, or its writer may spell it otherwise (below) | where its type allows null |
+| a key FOR JSON or `json_object` wrote with an escape (`/`, `\`, a control character) | nothing, ever (HAR2102) | always | no |
 | a key an open object doesn't list | any JSON | yes | yes |
 | a key a closed object doesn't have | nothing, ever (HAR2102) | always | no |
 | a key of a map (`additionalProperties` with a schema, `json_objectagg`) | the map's values | yes: its keys are data | where its values may be |
@@ -2282,6 +2283,17 @@ wrong, since every call fails, but reading one it accepts as other steps would.
 | any step of any JSON | any JSON | yes | yes |
 | a key of an array or a scalar, an index of an object or a scalar | nothing, ever (HAR2102) | always | no |
 | a union | what each variant finds, joined | where any does | where any does |
+
+**A key is found only as it is spelled** (`KeySpelling`, `A_path_finds_a_key_only_where_both_are_spelled_the_same`): a path and
+the stored key are compared character for character, neither decoded, so `$.A` doesn't find a key stored as `\u0041`, under
+`nvarchar`, `varchar` and `json` alike. Each object shape records who may have written its keys (`ObjectShape.Writers`, joined as
+a union), and the walk asks the one rule whether the key is found. An application's key (declared JSON, a REST response, a
+declared result) is found only when every character is an ASCII letter or digit, the blank or ``! # $ % ( ) * , - . : ; ? @ [ ]
+^ _ { | } ~``, which no common writer, run or documented, escapes (`System.Text.Json` escapes ``" & ' + < > \ ` `` and everything
+past ASCII, Gson `=`, `JSON.stringify` only `"`, `\` and control characters); otherwise it may be missing, and the note names the key and the characters.
+SQL Server's own key (`FOR JSON`, `json_object`, the REST envelope) is found unless it holds `/`, `\` or a control character, which
+it escapes and a path can't spell; a key in a literal or assembled text holds no escape, so it is found. Why: [decision
+0147](../../docs/decisions/0147-a-key-a-writer-may-escape-may-be-missing-from-a-path.md).
 
 A recursive node or an unknown is not walked, and the function falls back to its own rule. Any JSON at the end of a path may be
 `null` itself, and so may a row of `OPENJSON` read at `$` (`strict $` gives the row's own value, NULL for a `null` row:

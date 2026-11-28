@@ -657,6 +657,12 @@ haruspex types it only when it is declared ([decision 0017](decisions/0017-store
   as a key a closed object doesn't list, is warned of (HAR2102)
   ([decision 0097](decisions/0097-a-path-into-json-of-known-shape-is-walked-step-by-step.md)). A declaration also claims that no
   key is written twice in one object: SQL Server's paths read the first of two, and `JSON.parse` the last.
+- **A path finds a key only as it is spelled**, and a writer may spell one with escapes (`"caf\u00e9"` for `café`): so a
+  required key is read non-null by a path only when every character of it is an ASCII letter or digit, the blank, or one of
+  `! # $ % ( ) * , - . : ; ? @ [ ] ^ _ { | } ~`, which no common writer escapes. Any other key may be missing under a lax path,
+  and `explain` names the key and its characters. `System.Text.Json` escapes `+`, `<`, `&` and every character past ASCII by
+  default, and Python's `json.dumps` every character past ASCII; a plain read, which a parser decodes, keeps every key
+  ([decision 0147](decisions/0147-a-key-a-writer-may-escape-may-be-missing-from-a-path.md)).
 - **A `varchar` or `char` column's text is in its code page**, its collation's or else the database's (the `collation` setting,
   for a folder of scripts), and a character the code page lacks, written as itself, comes back as another: `Ω` as `O` under a
   Latin1 collation, an emoji as `??`. A JSON escape (`\u03a9`) is kept. So a string's value set is kept only when the code page
@@ -727,8 +733,8 @@ for the parameter, with a JSON Schema file:
   [the JSON Schemas a declaration reads](#the-json-schemas-a-declaration-reads) says. Its top can't allow `null` (HAR3115): SQL
   Server's JSON functions refuse the text `null`, and a caller with no value sends NULL, which the parameter's own nullability says.
 - **The body's reads take it as given** until the parameter is assigned: `JSON_VALUE(@order, '$.mode')`, `json_query`, `OPENJSON`
-  with or without `WITH`, and a variable assigned the parameter, walk the schema's type as for a declared column. A read after the
-  parameter is assigned has no declaration.
+  with or without `WITH`, and a variable assigned the parameter, walk the schema's type as for a declared column, a key a caller
+  may escape included. A read after the parameter is assigned has no declaration.
 - **A default other than NULL** is what a caller that leaves the parameter out sends, so the body reads it beside the declared JSON.
   A `varchar` or `char` parameter's text is in the database's code page, so its reads are typed as that code page gives them back,
   as a declared `varchar` column's are (above).
@@ -786,7 +792,7 @@ SELECT JSON_VALUE(@response, '$.result.name') AS name, JSON_QUERY(@response, '$.
   `@method` sends `POST`.
 - **`response`** is the JSON Schema file of the reply's body, relative to this file, with a JSON Pointer after `#` when it isn't
   the whole file, read as [a column's JSON is](#the-json-schemas-a-declaration-reads): an object may hold keys the schema
-  doesn't list, and a key it doesn't require may be left out. It describes the body of **every** status, since an error's body is
+  doesn't list, a key it doesn't require may be left out, and a key a writer may escape may be missing from a path. It describes the body of **every** status, since an error's body is
   written into `result` too: a service whose errors send another shape is declared with `anyOf`. A body that isn't an object or
   an array fails the call, so only those parts of the schema are read.
 - **Which calls take it.** `@url` and `@method` are read from the text the SQL builds: literals, `+` and `CONCAT`, a number

@@ -140,9 +140,10 @@ internal static class RestCalls
         static FieldShape Field(string name, Shape type) => new(name, type, IrPresence.Always, []);
 
         // The server writes the status as an int, in a few characters, so JSON_VALUE always gives its text.
-        var http = new ObjectShape([Field("code", SqlTypes.ToConvertedShape(new ScalarType(BuiltInType.Int), at)), Field("description", AnyString)]);
-        var response = new ObjectShape([Field("status", new ObjectShape([Field("http", http)])), Field("headers", new RecordShape(AnyString, []))]);
-        return new ObjectShape([Field("response", response), new FieldShape("result", result, IrPresence.Optional, []) { LeftOutBecause = "as it is when the reply has no body" }]);
+        // The server writes the envelope; its keys are letters, which no writer escapes.
+        var http = new ObjectShape([Field("code", SqlTypes.ToConvertedShape(new ScalarType(BuiltInType.Int), at)), Field("description", AnyString)]) { Writers = KeyWriters.SqlServer };
+        var response = new ObjectShape([Field("status", new ObjectShape([Field("http", http)]) { Writers = KeyWriters.SqlServer }), Field("headers", new RecordShape(AnyString, []))]) { Writers = KeyWriters.SqlServer };
+        return new ObjectShape([Field("response", response), new FieldShape("result", result, IrPresence.Optional, []) { LeftOutBecause = "as it is when the reply has no body" }]) { Writers = KeyWriters.SqlServer };
     }
 
     /// <summary>A JSON string of any content.</summary>

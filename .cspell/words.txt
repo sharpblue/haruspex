@@ -165,7 +165,8 @@ subpatterns
 # readelf: the binutils tool that reads an ELF binary's notes; objdump: the binutils tool that lists a binary's dynamic
 # symbols and the glibc versions they need; msbuild: the .NET SDK's build engine, as dotnet msbuild runs it;
 # globalroot: Windows's object-manager name for the root of its namespace, as in \??\GLOBALROOT\Device\Mup, a device path that
-# names a share)
+# names a share; newtonsoft, gson: Newtonsoft.Json and Gson, the .NET and Java JSON libraries whose escaping of keys decision 0147
+# records)
 codegen
 dacfx
 dacpac
@@ -176,7 +177,9 @@ kysely
 msdb
 mscorlib
 netsdk
+gson
 netstandard
+newtonsoft
 rhysd
 sarif
 setvar

@@ -52,7 +52,7 @@ internal static class IrShapes
                     return Unknown(IrUnknownReason.UnresolvedRecursion, $"{declared} refers to {reference.Name} inside itself, which is not modelled.");
                 try
                 {
-                    return new ObjectShape([.. obj.Fields.Select(f => new FieldShape(f.Name, Of(f.Type), f.Presence, f.NullableBecause))]) { Open = obj.Open };
+                    return new ObjectShape([.. obj.Fields.Select(f => new FieldShape(f.Name, Of(f.Type), f.Presence, f.NullableBecause))]) { Open = obj.Open, Writers = KeyWriters.Application };
                 }
                 finally
                 {

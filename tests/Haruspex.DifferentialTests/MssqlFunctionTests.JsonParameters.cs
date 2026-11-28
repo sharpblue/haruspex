@@ -117,8 +117,9 @@ public partial class MssqlFunctionTests
     public async Task A_varchar_parameter_s_keys_are_sent_as_written_so_a_path_finds_one_its_code_page_holds()
     {
         // A path never finds a key written as an escape (observed by ann3-review), so keys are sent as themselves: café, which code
-        // page 1252 holds, arrives intact and is found; Ω, which it lacks, arrives as O, and the read side types it as optional. A
-        // greatest length lets json_value claim it fits in its 4,000 characters, so the guarded read is non-null.
+        // page 1252 holds, arrives intact and is found; Ω, which it lacks, arrives as O, and the read side types it as optional. The
+        // read of café is still nullable: another caller may send its é as an escape, which no path finds
+        // (docs/decisions/0147-a-key-a-writer-may-escape-may-be-missing-from-a-path.md).
         using var dir = new TempDirectory();
         dir.File("db/schema.sql", "CREATE SCHEMA outlet;");
         dir.File("db/read_badge.sql", ReadBadge);
@@ -136,7 +137,7 @@ public partial class MssqlFunctionTests
         Assert.Null(response.Error);
         Assert.Equal("ā", response.Value!.Value[0].GetProperty("cafe").GetString());
         Assert.Equal(JsonValueKind.Null, response.Value!.Value[0].GetProperty("omega").ValueKind);
-        Assert.False(IrNavigation.Field(doc, "cafe").Nullable);
+        Assert.True(IrNavigation.Field(doc, "cafe").Nullable);
         Assert.True(IrNavigation.Field(doc, "omega").Nullable);
     }
 }

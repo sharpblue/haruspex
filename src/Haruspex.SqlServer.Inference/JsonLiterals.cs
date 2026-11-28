@@ -131,7 +131,7 @@ internal static class JsonLiterals
                     fields.Add(new FieldShape(property.Name, type, IrPresence.Always, Null(property.Value, at)));
                 }
 
-                return new ObjectShape([.. fields]);
+                return new ObjectShape([.. fields]) { Writers = KeyWriters.Literal };
             case JsonValueKind.Array:
                 var items = new List<ElementShape>();
                 foreach (var item in element.EnumerateArray())

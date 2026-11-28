@@ -11,4 +11,10 @@ internal sealed record ObjectShape(EquatableArray<FieldShape> Fields) : Shape
     /// declared to hold, whose writer may have added others. An object the database builds holds only its own keys.
     /// </summary>
     public bool Open { get; init; }
+
+    /// <summary>
+    /// Who may have written its keys, and so how each is spelled where a path reads it (<see cref="KeySpelling"/>): an application,
+    /// unless it is built here. Not part of the IR, which holds the decoded keys a parser gives.
+    /// </summary>
+    public KeyWriters Writers { get; init; } = KeyWriters.Application;
 }

@@ -334,7 +334,7 @@ internal sealed partial class Typer(
             };
             return key is null
                 ? Unsupported(IrUnknownReason.UnsupportedQuery, "FOR JSON AUTO, ROOT without a name keys the document by one of the FROM's sources, which is not modelled; name it, ROOT('name').", At(clause))
-                : new ObjectShape([new FieldShape(key, Rows(shape, row), IrPresence.Always, [])]);
+                : new ObjectShape([new FieldShape(key, Rows(shape, row), IrPresence.Always, [])]) { Writers = KeyWriters.SqlServer };
         }
 
         return subquery ? Rows(shape, row) : new ArrayShape(shape, []);
@@ -430,7 +430,7 @@ internal sealed partial class Typer(
                 : new FieldShape(key, nested, IrPresence.Always, []));
         }
 
-        return new ObjectShape([.. fields]);
+        return new ObjectShape([.. fields]) { Writers = KeyWriters.SqlServer };
     }
 
     /// <summary>
@@ -935,7 +935,7 @@ internal sealed partial class Typer(
             fields.Add(new FieldShape(key.Value, value.Shape, presence, value.NullableBecause));
         }
 
-        return new Value(new ObjectShape([.. fields]), [], IsLiveJson: true);
+        return new Value(new ObjectShape([.. fields]) { Writers = KeyWriters.SqlServer }, [], IsLiveJson: true);
     }
 
     /// <summary>

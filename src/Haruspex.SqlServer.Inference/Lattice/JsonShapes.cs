@@ -94,7 +94,7 @@ internal static class JsonShapes
         (ArrayShape x, ArrayShape y) => Same(x.Items, y.Items) && NullReasons.Same(x.ItemsNullableBecause, y.ItemsNullableBecause) && x.MinItems == y.MinItems && x.MaxItems == y.MaxItems,
         (TupleShape x, TupleShape y) => x.Items.Count == y.Items.Count
             && x.Items.Zip(y.Items).All(p => Same(p.First.Type, p.Second.Type) && NullReasons.Same(p.First.NullableBecause, p.Second.NullableBecause)),
-        (ObjectShape x, ObjectShape y) => x.Open == y.Open && x.Fields.Count == y.Fields.Count
+        (ObjectShape x, ObjectShape y) => x.Open == y.Open && x.Writers == y.Writers && x.Fields.Count == y.Fields.Count
             && x.Fields.Zip(y.Fields).All(p => p.First.Name == p.Second.Name && p.First.Presence == p.Second.Presence
                 && Same(p.First.Type, p.Second.Type) && NullReasons.Same(p.First.NullableBecause, p.Second.NullableBecause)),
         (RecordShape x, RecordShape y) => Same(x.Values, y.Values) && NullReasons.Same(x.ValuesNullableBecause, y.ValuesNullableBecause),
@@ -128,7 +128,7 @@ internal static class JsonShapes
             && x.Items.Count >= (y.MinItems ?? 0) && (y.MaxItems is null || x.Items.Count <= y.MaxItems),
         (TupleShape x, TupleShape y) => x.Items.Count == y.Items.Count
             && x.Items.Zip(y.Items).All(p => Below(p.First.Type, p.Second.Type) && NullReasons.Below(p.First.NullableBecause, p.Second.NullableBecause)),
-        (ObjectShape x, ObjectShape y) => (!x.Open || y.Open) && x.Fields.Count == y.Fields.Count
+        (ObjectShape x, ObjectShape y) => (!x.Open || y.Open) && (x.Writers & ~y.Writers) == 0 && x.Fields.Count == y.Fields.Count
             && x.Fields.Zip(y.Fields).All(p => p.First.Name == p.Second.Name
                 && (p.First.Presence == p.Second.Presence || p.First.NullableBecause.Count == 0)
                 && Below(p.First.Type, p.Second.Type) && NullReasons.Below(p.First.NullableBecause, p.Second.NullableBecause)),
@@ -189,7 +189,7 @@ internal static class JsonShapes
             fields.Add(new FieldShape(f.Name, Join(f.Type, g.Type), f.Presence, NullReasons.Join(f.NullableBecause, g.NullableBecause)) { From = f.From, Description = CommonDescriptions.Same(f.Description, g.Description) });
         }
 
-        return new ObjectShape([.. fields]) { Open = x.Open || y.Open };
+        return new ObjectShape([.. fields]) { Open = x.Open || y.Open, Writers = x.Writers | y.Writers };
     }
 
     /// <summary>An array of the items of two arrays or tuples: each item of either, between the fewest and most of both.</summary>
